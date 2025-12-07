@@ -20,6 +20,7 @@ import CorrectionRequests from "./pages/CorrectionRequests";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import ActivityLogs from "./pages/ActivityLogs";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/auth" element={<Auth />} />
             <Route element={<AdminLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/students" element={<StudentsList />} />
