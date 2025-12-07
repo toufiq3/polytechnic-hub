@@ -13,6 +13,7 @@ import Admissions from "./pages/Admissions";
 import ClassRoutine from "./pages/ClassRoutine";
 import AttendanceMarks from "./pages/AttendanceMarks";
 import StudentProfiles from "./pages/StudentProfiles";
+import StudentDetails from "./pages/StudentDetails";
 import Alumni from "./pages/Alumni";
 import Documents from "./pages/Documents";
 import Applications from "./pages/Applications";
@@ -20,6 +21,7 @@ import CorrectionRequests from "./pages/CorrectionRequests";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import ActivityLogs from "./pages/ActivityLogs";
+import Departments from "./pages/Departments";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -37,9 +39,11 @@ const App = () => (
             <Route element={<AdminLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/students" element={<StudentsList />} />
+              <Route path="/students/:id" element={<StudentDetails />} />
               <Route path="/add-student" element={<AddStudent />} />
               <Route path="/discontinued-students" element={<DiscontinuedStudents />} />
               <Route path="/admissions" element={<Admissions />} />
+              <Route path="/departments" element={<Departments />} />
               <Route path="/class-routine" element={<ClassRoutine />} />
               <Route path="/attendance-marks" element={<AttendanceMarks />} />
               <Route path="/student-profiles" element={<StudentProfiles />} />

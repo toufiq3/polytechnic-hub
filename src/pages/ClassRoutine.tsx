@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Filter, Download, Clock } from 'lucide-react';
+import { Calendar, Filter, Download, Clock, Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const departments = ['Computer Technology', 'Electrical Technology', 'Civil Technology', 'Mechanical Technology', 'Electronics Technology'];
 const semesters = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
@@ -12,7 +16,15 @@ const shifts = ['Morning', 'Day'];
 const days = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 const timeSlots = ['8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-1:00', '1:00-2:00', '2:00-3:00', '3:00-4:00'];
 
-const sampleRoutine: Record<string, Record<string, { subject: string; teacher: string; room: string } | null>> = {
+interface ClassSlot {
+  subject: string;
+  teacher: string;
+  room: string;
+}
+
+type RoutineData = Record<string, Record<string, ClassSlot | null>>;
+
+const initialRoutine: RoutineData = {
   'Saturday': {
     '8:00-9:00': { subject: 'Mathematics', teacher: 'Mr. Rahman', room: '101' },
     '9:00-10:00': { subject: 'Physics', teacher: 'Mr. Karim', room: '102' },
@@ -93,6 +105,70 @@ export default function ClassRoutine() {
   const [department, setDepartment] = useState('Computer Technology');
   const [semester, setSemester] = useState('4th');
   const [shift, setShift] = useState('Morning');
+  const [routine, setRoutine] = useState<RoutineData>(initialRoutine);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{ day: string; time: string } | null>(null);
+  const [slotForm, setSlotForm] = useState({ subject: '', teacher: '', room: '' });
+  const { toast } = useToast();
+
+  const handleSlotClick = (day: string, time: string) => {
+    if (!isEditMode) return;
+    setSelectedSlot({ day, time });
+    const existing = routine[day]?.[time];
+    if (existing) {
+      setSlotForm({ subject: existing.subject, teacher: existing.teacher, room: existing.room });
+    } else {
+      setSlotForm({ subject: '', teacher: '', room: '' });
+    }
+    setIsAddDialogOpen(true);
+  };
+
+  const handleSaveSlot = () => {
+    if (!selectedSlot) return;
+    const { day, time } = selectedSlot;
+    
+    if (!slotForm.subject) {
+      // Remove the slot (set to null/break)
+      setRoutine(prev => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          [time]: null
+        }
+      }));
+    } else {
+      setRoutine(prev => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          [time]: { subject: slotForm.subject, teacher: slotForm.teacher, room: slotForm.room }
+        }
+      }));
+    }
+    
+    setIsAddDialogOpen(false);
+    toast({ title: "Slot Updated", description: "Class routine has been updated." });
+  };
+
+  const handleDeleteSlot = () => {
+    if (!selectedSlot) return;
+    const { day, time } = selectedSlot;
+    setRoutine(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [time]: null
+      }
+    }));
+    setIsAddDialogOpen(false);
+    toast({ title: "Slot Removed", description: "The class has been removed from the routine." });
+  };
+
+  const handleSaveRoutine = () => {
+    setIsEditMode(false);
+    toast({ title: "Routine Saved", description: "Class routine has been saved successfully." });
+  };
 
   return (
     <div className="space-y-6">
@@ -100,12 +176,33 @@ export default function ClassRoutine() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Class Routine</h1>
-          <p className="text-muted-foreground">Department-wise weekly class schedule</p>
+          <p className="text-muted-foreground">Manage department-wise weekly class schedules</p>
         </div>
-        <Button className="gradient-primary text-primary-foreground">
-          <Download className="w-4 h-4 mr-2" />
-          Export PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          {isEditMode ? (
+            <>
+              <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveRoutine} className="gradient-primary text-primary-foreground">
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsEditMode(true)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Routine
+              </Button>
+              <Button className="gradient-primary text-primary-foreground">
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -174,6 +271,12 @@ export default function ClassRoutine() {
           <Clock className="w-3 h-3 mr-1" />
           {shift} Shift
         </Badge>
+        {isEditMode && (
+          <Badge className="bg-warning/20 text-warning border-warning/30">
+            <Edit className="w-3 h-3 mr-1" />
+            Edit Mode - Click on slots to modify
+          </Badge>
+        )}
       </div>
 
       {/* Routine Grid */}
@@ -206,12 +309,19 @@ export default function ClassRoutine() {
                       {day}
                     </td>
                     {timeSlots.map(slot => {
-                      const classInfo = sampleRoutine[day]?.[slot];
+                      const classInfo = routine[day]?.[slot];
                       if (!classInfo) {
                         return (
                           <td key={slot} className="p-2 text-center">
-                            <div className="h-16 rounded-lg bg-muted/20 border border-dashed border-border/50 flex items-center justify-center">
-                              <span className="text-xs text-muted-foreground">Break</span>
+                            <div 
+                              onClick={() => handleSlotClick(day, slot)}
+                              className={`h-16 rounded-lg bg-muted/20 border border-dashed border-border/50 flex items-center justify-center ${isEditMode ? 'cursor-pointer hover:bg-muted/40 hover:border-primary/50' : ''}`}
+                            >
+                              {isEditMode ? (
+                                <Plus className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Break</span>
+                              )}
                             </div>
                           </td>
                         );
@@ -219,8 +329,9 @@ export default function ClassRoutine() {
                       return (
                         <td key={slot} className="p-2">
                           <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            className={`h-16 rounded-lg border p-2 cursor-pointer transition-all ${subjectColors[classInfo.subject] || 'bg-muted/50'}`}
+                            whileHover={{ scale: isEditMode ? 1.02 : 1 }}
+                            onClick={() => handleSlotClick(day, slot)}
+                            className={`h-16 rounded-lg border p-2 transition-all ${subjectColors[classInfo.subject] || 'bg-muted/50'} ${isEditMode ? 'cursor-pointer hover:ring-2 hover:ring-primary/50' : ''}`}
                           >
                             <p className="font-medium text-xs truncate">{classInfo.subject}</p>
                             <p className="text-[10px] opacity-80 truncate">{classInfo.teacher}</p>
@@ -252,6 +363,62 @@ export default function ClassRoutine() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add/Edit Slot Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSlot && routine[selectedSlot.day]?.[selectedSlot.time] ? 'Edit Class Slot' : 'Add Class Slot'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedSlot && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4" />
+                <span>{selectedSlot.day}, {selectedSlot.time}</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Subject Name</Label>
+              <Input 
+                placeholder="e.g., Mathematics"
+                value={slotForm.subject}
+                onChange={(e) => setSlotForm({ ...slotForm, subject: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Teacher Name</Label>
+              <Input 
+                placeholder="e.g., Mr. Rahman"
+                value={slotForm.teacher}
+                onChange={(e) => setSlotForm({ ...slotForm, teacher: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Room</Label>
+              <Input 
+                placeholder="e.g., Room 101 or Lab 1"
+                value={slotForm.room}
+                onChange={(e) => setSlotForm({ ...slotForm, room: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            {selectedSlot && routine[selectedSlot.day]?.[selectedSlot.time] && (
+              <Button variant="destructive" onClick={handleDeleteSlot} className="mr-auto">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remove
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveSlot} className="gradient-primary text-primary-foreground">
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
