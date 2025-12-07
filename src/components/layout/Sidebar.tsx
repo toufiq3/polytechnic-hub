@@ -46,6 +46,7 @@ const menuItems = [
   {
     label: 'Academics',
     items: [
+      { icon: BookOpen, label: 'Departments', path: '/departments' },
       { icon: Calendar, label: 'Class Routine', path: '/class-routine' },
       { icon: ClipboardCheck, label: 'Attendance & Marks', path: '/attendance-marks' },
     ],
