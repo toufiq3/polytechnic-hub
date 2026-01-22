@@ -23,6 +23,7 @@ import {
   UserCog,
   Bell,
   ChevronRight,
+  MessageSquareWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -87,6 +88,7 @@ const menuItems: MenuGroup[] = [
       { icon: Inbox, label: 'Applications', path: '/applications' },
       { icon: FileEdit, label: 'Correction Requests', path: '/correction-requests' },
       { icon: UserCog, label: 'Signup Requests', path: '/signup-requests' },
+      { icon: MessageSquareWarning, label: 'Complaints', path: '/complaints' },
     ],
   },
   {

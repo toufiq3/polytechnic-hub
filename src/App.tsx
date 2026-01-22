@@ -34,6 +34,7 @@ import Notices from "./pages/Notices";
 import StipendEligible from "./pages/StipendEligible";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Complaints from "./pages/Complaints";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
                   <Route path="/documents" element={<Documents />} />
                   <Route path="/applications" element={<Applications />} />
                   <Route path="/correction-requests" element={<CorrectionRequests />} />
+                  <Route path="/complaints" element={<Complaints />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/activity-logs" element={<ActivityLogs />} />
