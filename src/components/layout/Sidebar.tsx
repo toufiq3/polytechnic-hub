@@ -58,6 +58,7 @@ const menuItems: MenuGroup[] = [
       { icon: UserPlus, label: 'Add Student', path: '/add-student' },
       { icon: UserX, label: 'Discontinued Students', path: '/discontinued-students' },
       { icon: GraduationCap, label: 'Admissions', path: '/admissions' },
+      { icon: Award, label: 'Stipend Eligible', path: '/stipend-eligible' },
     ],
   },
   {
