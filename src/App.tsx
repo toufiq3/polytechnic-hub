@@ -31,6 +31,7 @@ import DepartmentView from "./pages/DepartmentView";
 import Teachers from "./pages/Teachers";
 import SignupRequests from "./pages/SignupRequests";
 import Notices from "./pages/Notices";
+import StipendEligible from "./pages/StipendEligible";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -61,6 +62,7 @@ const App = () => (
                   <Route path="/discontinued-students" element={<DiscontinuedStudents />} />
                   <Route path="/admissions" element={<Admissions />} />
                   <Route path="/admissions/:id" element={<AdmissionDetails />} />
+                  <Route path="/stipend-eligible" element={<StipendEligible />} />
                   <Route path="/departments" element={<Departments />} />
                   <Route path="/departments/:id" element={<DepartmentView />} />
                   <Route path="/teachers" element={<Teachers />} />
