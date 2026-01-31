@@ -93,9 +93,10 @@ export default function ClassRoutine() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const [retryCount, setRetryCount] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isTeacherEditMode, setIsTeacherEditMode] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ day: DayOfWeek; time: string } | null>(null);
-  const [slotForm, setSlotForm] = useState({ subject: '', teacher: '', room: '' });
+  const [slotForm, setSlotForm] = useState({ subject: '', teacher: '', room: '', department: '', semester: 4 });
   const [slotFormErrors, setSlotFormErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const timeSlots = timeSlotsByShift[shift] || [];
@@ -308,13 +309,30 @@ export default function ClassRoutine() {
   };
 
   const handleSlotClick = (day: DayOfWeek, time: string) => {
-    if (!isEditMode) return;
+    // Allow click in student edit mode or teacher edit mode
+    if (viewMode === 'student' && !isEditMode) return;
+    if (viewMode === 'teacher' && !isTeacherEditMode) return;
+    
     setSelectedSlot({ day, time });
     const existing = routineGrid[day]?.[time];
     if (existing) {
-      setSlotForm({ subject: existing.subject, teacher: existing.teacher, room: existing.room });
+      setSlotForm({ 
+        subject: existing.subject, 
+        teacher: existing.teacher, 
+        room: existing.room,
+        department: department,
+        semester: semester
+      });
     } else {
-      setSlotForm({ subject: '', teacher: '', room: '' });
+      // For teacher mode, pre-fill teacher name
+      const selectedTeacherData = teachers.find(t => t.id === selectedTeacher);
+      setSlotForm({ 
+        subject: '', 
+        teacher: viewMode === 'teacher' && selectedTeacherData ? selectedTeacherData.fullNameEnglish : '', 
+        room: '',
+        department: department || (departments.length > 0 ? departments[0].id : ''),
+        semester: semester || 4
+      });
     }
     setSlotFormErrors({}); // Clear any previous errors
     setIsAddDialogOpen(true);
@@ -371,6 +389,19 @@ export default function ClassRoutine() {
         variant: 'destructive',
       });
       return;
+    }
+
+    // Additional validation for teacher mode
+    if (viewMode === 'teacher' && slotForm.subject) {
+      if (!slotForm.department) {
+        setSlotFormErrors(prev => ({ ...prev, department: 'Department is required' }));
+        toast({
+          title: 'Validation Error',
+          description: 'Please select a department for this class.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     const { day, time } = selectedSlot;
@@ -440,10 +471,21 @@ export default function ClassRoutine() {
   };
 
   const handleSaveRoutine = async () => {
-    if (!department) {
+    // For student mode, require department
+    if (viewMode === 'student' && !department) {
       toast({
         title: 'Missing department',
         description: 'Select a department before saving changes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // For teacher mode, require teacher selection
+    if (viewMode === 'teacher' && !selectedTeacher) {
+      toast({
+        title: 'Missing teacher',
+        description: 'Select a teacher before saving changes.',
         variant: 'destructive',
       });
       return;
@@ -456,16 +498,22 @@ export default function ClassRoutine() {
       setError(null);
       setValidationErrors({});
       
+      // Determine the parameters based on view mode
+      const saveFilters = viewMode === 'student' 
+        ? { department, semester, shift, session }
+        : { teacher: selectedTeacher, shift, session, department: slotForm.department || department, semester: slotForm.semester || semester };
+      
       console.log('Saving routine with data:', {
         routineGrid,
         routineData: routineData.length,
-        filters: { department, semester, shift, session }
+        filters: saveFilters,
+        viewMode
       });
       
       const saveResponse = await routineTransformers.saveRoutineChanges(
         routineGrid,
         routineData,
-        { department, semester, shift, session }
+        saveFilters
       );
 
       console.log('Save response:', saveResponse);
@@ -488,11 +536,15 @@ export default function ClassRoutine() {
       }
 
       // Clear cache and force refresh the routine data from server
-      routineService.cache.invalidateByFilters({ department, semester, shift });
-      await fetchRoutine();
-      
-      // Exit edit mode only after successful save and refresh
-      setIsEditMode(false);
+      if (viewMode === 'student') {
+        routineService.cache.invalidateByFilters({ department, semester, shift });
+        await fetchRoutine();
+        setIsEditMode(false);
+      } else {
+        routineService.cache.invalidateByFilters({ teacher: selectedTeacher, shift });
+        await fetchTeacherRoutine();
+        setIsTeacherEditMode(false);
+      }
       
       // Notify about successful save with refresh confirmation
       toast({ 
@@ -612,6 +664,7 @@ export default function ClassRoutine() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Student Edit Mode Actions */}
           {viewMode === 'student' && isEditMode ? (
             <>
               <Button 
@@ -666,15 +719,64 @@ export default function ClassRoutine() {
                 Export PDF
               </Button>
             </>
-          ) : (
-            <Button 
-              className="gradient-primary text-primary-foreground"
-              disabled={loading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export PDF
-            </Button>
-          )}
+          ) : null}
+          
+          {/* Teacher Edit Mode Actions */}
+          {viewMode === 'teacher' && isTeacherEditMode ? (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsTeacherEditMode(false);
+                  setValidationErrors({});
+                  setError(null);
+                }} 
+                disabled={saving}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveRoutine} 
+                className="gradient-primary text-primary-foreground"
+                disabled={saving || loading}
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                {saving ? 'Saving Changes...' : 'Save Changes'}
+              </Button>
+              {Object.keys(validationErrors).length > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setValidationErrors({})}
+                  disabled={saving}
+                >
+                  Clear Errors
+                </Button>
+              )}
+            </>
+          ) : viewMode === 'teacher' ? (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsTeacherEditMode(true)}
+                disabled={loading || !selectedTeacher}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Routine
+              </Button>
+              <Button 
+                className="gradient-primary text-primary-foreground"
+                disabled={loading}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -810,6 +912,12 @@ export default function ClassRoutine() {
             Edit Mode - Click on slots to modify
           </Badge>
         )}
+        {viewMode === 'teacher' && isTeacherEditMode && (
+          <Badge className="bg-warning/20 text-warning border-warning/30">
+            <Edit className="w-3 h-3 mr-1" />
+            Edit Mode - Click on slots to add/edit classes for this teacher
+          </Badge>
+        )}
       </div>
 
       {/* Validation Errors Display */}
@@ -886,14 +994,15 @@ export default function ClassRoutine() {
                     </td>
                     {timeSlots.map(slot => {
                       const classInfo = routineGrid[day]?.[slot];
+                      const isEditableSlot = (viewMode === 'student' && isEditMode) || (viewMode === 'teacher' && isTeacherEditMode);
                       if (!classInfo) {
                           return (
                           <td key={slot} className="p-2 text-center">
                             <div 
-                              onClick={() => viewMode === 'student' && !saving && handleSlotClick(day, slot)}
-                              className={`h-16 rounded-lg bg-muted/20 border border-dashed border-border/50 flex items-center justify-center ${viewMode === 'student' && isEditMode && !saving ? 'cursor-pointer hover:bg-muted/40 hover:border-primary/50' : ''} ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={() => !saving && handleSlotClick(day, slot)}
+                              className={`h-16 rounded-lg bg-muted/20 border border-dashed border-border/50 flex items-center justify-center ${isEditableSlot && !saving ? 'cursor-pointer hover:bg-muted/40 hover:border-primary/50' : ''} ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              {viewMode === 'student' && isEditMode ? (
+                              {isEditableSlot ? (
                                 <Plus className="w-4 h-4 text-muted-foreground" />
                               ) : (
                                 <span className="text-xs text-muted-foreground">-</span>
@@ -902,12 +1011,13 @@ export default function ClassRoutine() {
                           </td>
                         );
                       }
+                      const isEditableCell = (viewMode === 'student' && isEditMode) || (viewMode === 'teacher' && isTeacherEditMode);
                       return (
                         <td key={slot} className="p-2">
                           <motion.div
-                            whileHover={{ scale: viewMode === 'student' && isEditMode && !saving ? 1.02 : 1 }}
-                            onClick={() => viewMode === 'student' && !saving && handleSlotClick(day, slot)}
-                            className={`h-16 rounded-lg border p-2 transition-all ${subjectColors[classInfo.subject] || 'bg-muted/50'} ${viewMode === 'student' && isEditMode && !saving ? 'cursor-pointer hover:ring-2 hover:ring-primary/50' : ''} ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            whileHover={{ scale: isEditableCell && !saving ? 1.02 : 1 }}
+                            onClick={() => !saving && handleSlotClick(day, slot)}
+                            className={`h-16 rounded-lg border p-2 transition-all ${subjectColors[classInfo.subject] || 'bg-muted/50'} ${isEditableCell && !saving ? 'cursor-pointer hover:ring-2 hover:ring-primary/50' : ''} ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <p className="font-medium text-xs truncate">{classInfo.subject}</p>
                             <p className="text-[10px] opacity-80 truncate">{classInfo.teacher}</p>
@@ -974,11 +1084,56 @@ export default function ClassRoutine() {
                 value={slotForm.teacher}
                 onChange={(e) => handleSlotFormChange('teacher', e.target.value)}
                 className={slotFormErrors.teacher ? 'border-destructive' : ''}
+                disabled={viewMode === 'teacher'} // Teacher name is fixed in teacher mode
               />
               {slotFormErrors.teacher && (
                 <p className="text-sm text-destructive">{slotFormErrors.teacher}</p>
               )}
             </div>
+            
+            {/* Department and Semester selectors for teacher mode */}
+            {viewMode === 'teacher' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Department <span className="text-destructive">*</span></Label>
+                  <Select 
+                    value={slotForm.department} 
+                    onValueChange={(val) => handleSlotFormChange('department', val)}
+                  >
+                    <SelectTrigger className={slotFormErrors.department ? 'border-destructive' : ''}>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map(dept => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {slotFormErrors.department && (
+                    <p className="text-sm text-destructive">{slotFormErrors.department}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Semester</Label>
+                  <Select 
+                    value={slotForm.semester.toString()} 
+                    onValueChange={(val) => handleSlotFormChange('semester', val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {semesters.map(sem => (
+                        <SelectItem key={sem} value={sem.toString()}>
+                          {sem}{sem === 1 ? 'st' : sem === 2 ? 'nd' : sem === 3 ? 'rd' : 'th'} Semester
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            
             <div className="space-y-2">
               <Label>Room</Label>
               <Input 
