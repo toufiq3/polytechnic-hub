@@ -76,7 +76,6 @@ const menuItems: MenuGroup[] = [
     label: 'Profiles & Records',
     collapsible: true,
     items: [
-      { icon: UserCircle, label: 'Student Profiles', path: '/student-profiles' },
       { icon: Award, label: 'Alumni', path: '/alumni' },
       { icon: FileText, label: 'Documents', path: '/documents' },
     ],

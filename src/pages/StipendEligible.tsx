@@ -790,7 +790,7 @@ export default function StipendEligible() {
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Full Profile
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => navigate(`/student-profiles/${student.id}`)}>
+                                  <DropdownMenuItem onClick={() => navigate(`/students/${student.id}`)}>
                                     <GraduationCap className="h-4 w-4 mr-2" />
                                     Academic Details
                                   </DropdownMenuItem>
@@ -889,7 +889,7 @@ export default function StipendEligible() {
                                 variant="default" 
                                 size="sm" 
                                 className="flex-1"
-                                onClick={() => navigate(`/student-profiles/${student.id}`)}
+                                onClick={() => navigate(`/students/${student.id}`)}
                               >
                                 <GraduationCap className="h-4 w-4 mr-2" />
                                 Academic

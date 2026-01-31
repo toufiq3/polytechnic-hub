@@ -15,7 +15,7 @@ import Admissions from "./pages/Admissions";
 import AdmissionDetails from "./pages/AdmissionDetails";
 import ClassRoutine from "./pages/ClassRoutine";
 import AttendanceMarks from "./pages/AttendanceMarks";
-import StudentProfiles from "./pages/StudentProfiles";
+
 import StudentDetails from "./pages/StudentDetails";
 import EditStudent from "./pages/EditStudent";
 import Alumni from "./pages/Alumni";
@@ -33,6 +33,7 @@ import SignupRequests from "./pages/SignupRequests";
 import Notices from "./pages/Notices";
 import StipendEligible from "./pages/StipendEligible";
 import Auth from "./pages/Auth";
+import PasswordReset from "./pages/PasswordReset";
 import NotFound from "./pages/NotFound";
 import Complaints from "./pages/Complaints";
 
@@ -53,6 +54,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/password-reset" element={<PasswordReset />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route path="/" element={<Dashboard />} />
@@ -71,7 +73,7 @@ const App = () => (
                   <Route path="/notices" element={<Notices />} />
                   <Route path="/class-routine" element={<ClassRoutine />} />
                   <Route path="/attendance-marks" element={<AttendanceMarks />} />
-                  <Route path="/student-profiles" element={<StudentProfiles />} />
+
                   <Route path="/alumni" element={<Alumni />} />
                   <Route path="/alumni/:id" element={<AlumniDetails />} />
                   <Route path="/documents" element={<Documents />} />
